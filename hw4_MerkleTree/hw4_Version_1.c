@@ -7,21 +7,20 @@ unsigned long hash(char* key);
 
 int main(){
     int strings, StrMaxLen;
-    int incorrect_strings = 0;
     scanf("%d%d", &strings, &StrMaxLen);
-
-    char answer[StrMaxLen*strings];
-    memset(answer, 0, StrMaxLen*strings*sizeof(answer[0]));    // initialize
 
     if(StrMaxLen < 21)
         StrMaxLen = 21; // for 8-byte unsigned long
 
-    // n is the max number of nodes in the tree
-    int n = ceil(log10(strings)/log10(2));  // mind the parameter type of the function
-    n = pow(2, n+1) - 1;
+    //n is the max number of nodes in the tree
+    int n = ceil(log10(strings)/log10(2));  // minded the parameter type of the function
+    n = pow(2,n+1)-1;
+    char answer[StrMaxLen*strings];
+    memset(answer, 0, StrMaxLen*strings*sizeof(answer[0]));    // initialize
+    int incorrect_strings = 0;
 
     struct nodes{
-        int ID, level, levelNum;
+        int ID, level, nodeID;
         char string[StrMaxLen];
         unsigned long value;
         struct nodes* left;
@@ -38,104 +37,89 @@ int main(){
 
     // construct tree
     unsigned long hashvalue;
-    int childID = 0, nextID = strings;
-    int lastnodeID = strings - 1;   // 上一個 node
+    int childID = 0, parentID = strings;
+    int lastnodeID = strings-1;
 
     while(lastnodeID != childID){
-
-        // check if the tree isn't balance，i.e when the number of strings is odd (lastnode is even)
-        if(lastnodeID % 2 == 0 && lastnodeID != 0){
-            node[nextID].value = node[lastnodeID].value;  // copy the last node
-            node[nextID].ID = nextID;
-            node[nextID].right = NULL;
-            node[nextID].left = NULL;
-            nextID++;
+        if(lastnodeID % 2 == 0 && lastnodeID != 0){    // check if the tree isn't balance
+            node[parentID].value = node[lastnodeID].value;  // copy the last node
+            node[parentID].ID = parentID;
+            node[parentID].right = NULL;
+            node[parentID].left = NULL;
+            parentID++;
             lastnodeID++;
         }
-
-        memset(node[nextID].string, 0, StrMaxLen*sizeof(node[nextID].string[0]));   // initialize
-
-        // construct parent node 
-
-        /* Hashing Function :
-           1. Adding two unsigned long hash values
-           2. Transform the unsigned long hash value to a char string
-           3. Hash the char string to acquire the hashed value */
-
-        hashvalue = node[childID].value + node[childID+1].value;
-        sprintf(node[nextID].string, "%lu", hashvalue);   // set node[parentID].string  snprintf?
-        node[nextID].value = hash(node[nextID].string); // Hash the char string
-        node[nextID].left = &node[childID];
-        node[nextID].right = &node[childID+1];
-        node[nextID].ID = nextID;
+        hashvalue = node[childID].value + node[childID+1].value;    // adding the two unsigned long hash values
+        memset(node[parentID].string, 0, StrMaxLen*sizeof(node[parentID].string[0]));
+        sprintf(node[parentID].string, "%lu", hashvalue);           // I2S get node[parentID].string    snprintf?
+        node[parentID].value = hash(node[parentID].string); // Hash the char string
+        node[parentID].left = &node[childID];
+        node[parentID].right = &node[childID+1];
+        node[parentID].ID = parentID;
         
-        if(childID == lastnodeID-1){    // level end, update lastnodeID
-            lastnodeID = nextID;
+        if(childID == lastnodeID-1){    // level end
+            lastnodeID = parentID;
         }
-
-        // construct next parent node, nextID is patentID
-        childID += 2;   nextID++;
+        childID += 2;   parentID++;
     }
 
+    // for(int i = 0; i < n;i++){
+    //     printf("string[%d]: %s\n", i, node[i].string);
+    //     printf("value[%d]: %lu\n", i, node[i].value);
+    // }
+
     // Query
-    nextID = lastnodeID;
+    parentID = lastnodeID;
     int queue[n], front = -1, tail = -1;
     struct nodes *ptr, temp;
     char s[StrMaxLen];
 
-    printf("1 0 0\n");  // "1" for query action, "1 0 0" means asking for root (0,0)
+    printf("1 0 0\n");
     fflush(NULL);
-    scanf("%lu", &hashvalue);   // origin hashvalue
-
-    node[nextID].level = 0;
-    node[nextID].levelNum = 0;
-    if(node[nextID].value != hashvalue){    // 如果 root 有錯誤，push root in queue
-        queue[++tail] = nextID;
+    scanf("%lu", &hashvalue);   // correct hashvalue
+    node[parentID].level = 0;
+    node[parentID].nodeID = 0;
+    if(node[parentID].value != hashvalue){    // 如果root有錯誤
+        queue[++tail] = parentID;  // push root in queue
     }   //if not, then queue is empty: front == tail == -1
 
-    // while queue is not empty
     while(front != tail){
-        nextID = queue[++front];    // pop
-
-        // 如果此點表示的是原始數據（node[0]~node[strings]）
-        if(nextID < strings){
+        parentID = queue[++front];    // pop
+        // printf("checkid: %d\n", parentID);
+        // 如果此點表示的是原始數據
+        if(parentID < strings){
+            // printf("len[%d]: %d\n", parentID, strlen(node[parentID].string));
             memset(s, 0, StrMaxLen*sizeof(s[0]));
-            sprintf(s, "\n%s", node[nextID].string);
+            sprintf(s, "\n%s", node[parentID].string);
             strcat(answer, s);
             incorrect_strings++;
         }
-
-        // 否，則繼續檢查
-        else{
+        else{   // 否則繼續檢查
             // 檢查左邊，錯誤則放入Q
-            ptr = node[nextID].left;
-            if(ptr != NULL){    // null表示該點為複製的 不往下檢查 不加入queue
+            ptr = node[parentID].left;
+            if(ptr != NULL){    // null表示該點為複製來的 不往下檢查
                 temp = (*ptr);
-                if(strlen(temp.string) != 0){
-                    node[temp.ID].level = node[nextID].level + 1;
-                    node[temp.ID].levelNum = node[nextID].levelNum * 2;
-                    printf("1 %d %d\n", node[temp.ID].level, node[temp.ID].levelNum);
-                    fflush(NULL);
-                    scanf("%lu", &hashvalue);
-                    if(node[temp.ID].value != hashvalue){
-                        queue[++tail] = temp.ID;  // push
-                    }
+                node[temp.ID].level = node[parentID].level + 1;
+                node[temp.ID].nodeID = node[parentID].nodeID * 2;
+                printf("1 %d %d\n", node[temp.ID].level, node[temp.ID].nodeID);
+                fflush(NULL);
+                scanf("%lu", &hashvalue);
+                if(node[temp.ID].value != hashvalue){
+                    queue[++tail] = temp.ID;  // push
                 }
             }
 
             // 檢查右邊，錯誤則放入Q
-            ptr = node[nextID].right;
+            ptr = node[parentID].right;
                 if(ptr != NULL){
                 temp = (*ptr);
-                if(strlen(temp.string) != 0){
-                    node[temp.ID].level = node[nextID].level + 1;
-                    node[temp.ID].levelNum = (node[nextID].levelNum * 2) + 1;
-                    printf("1 %d %d\n", node[temp.ID].level, node[temp.ID].levelNum);
-                    fflush(NULL);
-                    scanf("%lu", &hashvalue);
-                    if(node[temp.ID].value != hashvalue){
-                        queue[++tail] = temp.ID;  // push
-                    }
+                node[temp.ID].level = node[parentID].level + 1;
+                node[temp.ID].nodeID = (node[parentID].nodeID * 2) + 1;
+                printf("1 %d %d\n", node[temp.ID].level, node[temp.ID].nodeID);
+                fflush(NULL);
+                scanf("%lu", &hashvalue);
+                if(node[temp.ID].value != hashvalue){
+                    queue[++tail] = temp.ID;  // push
                 }
             }
         }
