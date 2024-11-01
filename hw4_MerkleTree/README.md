@@ -52,11 +52,18 @@ ccccc
 ```
 
 ### Query 輸出
+<br/>
+<div align = "center">
+<image src = "sample_graph.png">
+
+Level 與 NodeIndex（LevelNum）編號方式如圖所示
+</div>
+<br/>
 <li>格式</li>
 
 ```bash
 1    Level    NodeIndex
-    // "1"表示該輸出為 Query，接著輸入欲詢問 hash 值節點之 level 值與 NodeIndex（LevelNumm）
+    // "1"表示該輸出為 Query，接著輸入欲詢問 hash 值節點之 level 值與 NodeIndex（LevelNum）
 ``` 
 
 <li>範例</li>
